@@ -1,0 +1,15 @@
+{
+  "lockVersion": 4,
+  "manifestHash": "sha256:276fecb7967d6246f60dd099180d87f991afb6369722cd2b6f4b472c73298032",
+  "goVersion": "1.23",
+  "target": {
+    "goos": "linux",
+    "goarch": "amd64",
+    "cgoEnabled": false,
+    "tags": []
+  },
+  "goModHash": "sha256:b70f7e2248c52c5a536dc779336c83338b92d68cdd23344f536d9dc8eb6eac27",
+  "goSumHash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "modules": null,
+  "goMod": "module github.com/puffball1567/km-validate\n\ngo 1.23\n"
+}

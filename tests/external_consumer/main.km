@@ -1,0 +1,15 @@
+import { newValidator } from "km-validate";
+import go fmt from "fmt";
+
+function main(): void {
+  const validator = newValidator();
+  const [nameError] = validator.minLength("name", "金木犀", 3);
+  const [siteError] = validator.httpURL("site", "https://example.com");
+  if (nameError !== nil || siteError !== nil) {
+    fmt.Println("configuration error");
+    return;
+  }
+  if (validator.valid()) {
+    fmt.Println("valid");
+  }
+}
