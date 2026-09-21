@@ -1,0 +1,258 @@
+import go errors from "errors";
+import go fmt from "fmt";
+import go math from "math";
+import go mail from "net/mail";
+import go url from "net/url";
+import go regexp from "regexp";
+import go strings from "strings";
+import go utf8 from "unicode/utf8";
+
+export struct Issue {
+  public field: string;
+  public code: string;
+  public message: string;
+}
+
+export class Validator {
+  private problems: Issue[];
+
+  constructor() {
+    this.problems = [];
+  }
+
+  public function valid(): boolean {
+    return len(this.problems) == 0;
+  }
+
+  public function size(): int {
+    return len(this.problems);
+  }
+
+  public function all(): Issue[] {
+    return copyIssues(this.problems);
+  }
+
+  public function clear(): void {
+    this.problems = [];
+  }
+
+  public function forField(field: string): Result<Issue[]> {
+    validatePath(field)?;
+    let matches: Issue[] = [];
+    for (const issue of this.problems) {
+      if (issue.field == field) {
+        matches = append(matches, issue);
+      }
+    }
+    return ok(matches);
+  }
+
+  public function has(field: string): Result<boolean> {
+    validatePath(field)?;
+    for (const issue of this.problems) {
+      if (issue.field == field) {
+        return ok(true);
+      }
+    }
+    return ok(false);
+  }
+
+  public function addAll(issues: Issue[]): Result<void> {
+    for (const issue of issues) {
+      validateIssue(issue)?;
+    }
+    for (const issue of issues) {
+      this.problems = append(this.problems, issue);
+    }
+    return ok();
+  }
+
+  public function reject(field: string, code: string, message: string): Result<void> {
+    const issue = newIssue(field, code, message);
+    validateIssue(issue)?;
+    this.problems = append(this.problems, issue);
+    return ok();
+  }
+
+  public function required(field: string, value: string): Result<void> {
+    validatePath(field)?;
+    if (strings.TrimSpace(value) == "") {
+      this.problems = append(this.problems, newIssue(field, "required", field + " is required"));
+    }
+    return ok();
+  }
+
+  public function minLength(field: string, value: string, minimum: int): Result<void> {
+    validatePath(field)?;
+    if (minimum < 0) {
+      return fail(errors.New("minimum length must not be negative"));
+    }
+    if (utf8.RuneCountInString(value) < minimum) {
+      this.problems = append(this.problems, newIssue(field, "min_length", fmt.Sprintf("%s must contain at least %d characters", field, minimum)));
+    }
+    return ok();
+  }
+
+  public function maxLength(field: string, value: string, maximum: int): Result<void> {
+    validatePath(field)?;
+    if (maximum < 0) {
+      return fail(errors.New("maximum length must not be negative"));
+    }
+    if (utf8.RuneCountInString(value) > maximum) {
+      this.problems = append(this.problems, newIssue(field, "max_length", fmt.Sprintf("%s must contain at most %d characters", field, maximum)));
+    }
+    return ok();
+  }
+
+  public function lengthRange(field: string, value: string, minimum: int, maximum: int): Result<void> {
+    validatePath(field)?;
+    if (minimum < 0 || maximum < 0 || minimum > maximum) {
+      return fail(errors.New("length range must be non-negative and ordered"));
+    }
+    const length = utf8.RuneCountInString(value);
+    if (length < minimum || length > maximum) {
+      this.problems = append(this.problems, newIssue(field, "length_range", fmt.Sprintf("%s must contain between %d and %d characters", field, minimum, maximum)));
+    }
+    return ok();
+  }
+
+  public function matches(field: string, value: string, pattern: string): Result<void> {
+    validatePath(field)?;
+    const expression = regexp.Compile(pattern)?;
+    if (!expression.MatchString(value)) {
+      this.problems = append(this.problems, newIssue(field, "pattern", field + " has an invalid format"));
+    }
+    return ok();
+  }
+
+  public function email(field: string, value: string): Result<void> {
+    validatePath(field)?;
+    const [address, parseError] = mail.ParseAddress(value);
+    if (parseError !== nil || address.Address != value) {
+      this.problems = append(this.problems, newIssue(field, "email", field + " must be a valid email address"));
+    }
+    return ok();
+  }
+
+  public function httpURL(field: string, value: string): Result<void> {
+    validatePath(field)?;
+    const [parsed, parseError] = url.ParseRequestURI(value);
+    if (parseError !== nil || (strings.ToLower(parsed.Scheme) != "http" && strings.ToLower(parsed.Scheme) != "https") || parsed.Host == "") {
+      this.problems = append(this.problems, newIssue(field, "http_url", field + " must be a valid HTTP or HTTPS URL"));
+    }
+    return ok();
+  }
+
+  public function oneOf(field: string, value: string, choices: string[]): Result<void> {
+    validatePath(field)?;
+    if (len(choices) == 0) {
+      return fail(errors.New("choices must not be empty"));
+    }
+    for (const choice of choices) {
+      if (value == choice) {
+        return ok();
+      }
+    }
+    this.problems = append(this.problems, newIssue(field, "one_of", field + " must be one of the allowed values"));
+    return ok();
+  }
+
+  public function integerRange(field: string, value: int64, minimum: int64, maximum: int64): Result<void> {
+    validatePath(field)?;
+    if (minimum > maximum) {
+      return fail(errors.New("integer range must be ordered"));
+    }
+    if (value < minimum || value > maximum) {
+      this.problems = append(this.problems, newIssue(field, "integer_range", fmt.Sprintf("%s must be between %d and %d", field, minimum, maximum)));
+    }
+    return ok();
+  }
+
+  public function numberRange(field: string, value: float64, minimum: float64, maximum: float64): Result<void> {
+    validatePath(field)?;
+    if (!finite(minimum) || !finite(maximum) || minimum > maximum) {
+      return fail(errors.New("number range bounds must be finite and ordered"));
+    }
+    if (!finite(value)) {
+      this.problems = append(this.problems, newIssue(field, "finite_number", field + " must be a finite number"));
+    } else if (value < minimum || value > maximum) {
+      this.problems = append(this.problems, newIssue(field, "number_range", fmt.Sprintf("%s must be between %g and %g", field, minimum, maximum)));
+    }
+    return ok();
+  }
+}
+
+export function newValidator(): Validator {
+  return new Validator();
+}
+
+function validatePath(field: string): Result<void> {
+  if (len(field) == 0 || strings.TrimSpace(field) != field) {
+    return fail(errors.New("validation field path must not be empty or surrounded by whitespace"));
+  }
+  let segmentStart = true;
+  for (let index = 0; index < len(field); index++) {
+    const character = field[index:index + 1];
+    if (character == ".") {
+      if (segmentStart) {
+        return fail(errors.New("validation field path contains an empty segment"));
+      }
+      segmentStart = true;
+    } else {
+      const letter = (character >= "a" && character <= "z") || (character >= "A" && character <= "Z");
+      const digit = character >= "0" && character <= "9";
+      if ((segmentStart && !letter && character != "_") || (!segmentStart && !letter && !digit && character != "_" && character != "-")) {
+        return fail(fmt.Errorf("invalid validation field path %q", field));
+      }
+      segmentStart = false;
+    }
+  }
+  if (segmentStart) {
+    return fail(errors.New("validation field path must not end with a dot"));
+  }
+  return ok();
+}
+
+function validateCode(code: string): Result<void> {
+  if (len(code) == 0) {
+    return fail(errors.New("validation issue code must not be empty"));
+  }
+  for (let index = 0; index < len(code); index++) {
+    const character = code[index:index + 1];
+    const letter = character >= "a" && character <= "z";
+    const digit = character >= "0" && character <= "9";
+    if ((index == 0 && !letter) || (index > 0 && !letter && !digit && character != "_")) {
+      return fail(fmt.Errorf("invalid validation issue code %q", code));
+    }
+  }
+  return ok();
+}
+
+function validateIssue(issue: Issue): Result<void> {
+  validatePath(issue.field)?;
+  validateCode(issue.code)?;
+  if (strings.TrimSpace(issue.message) == "") {
+    return fail(errors.New("validation issue message must not be blank"));
+  }
+  return ok();
+}
+
+function finite(value: float64): boolean {
+  return !math.IsNaN(value) && !math.IsInf(value, 0);
+}
+
+function newIssue(field: string, code: string, message: string): Issue {
+  return Issue {
+    field: field,
+    code: code,
+    message: message,
+  };
+}
+
+function copyIssues(source: Issue[]): Issue[] {
+  let copied: Issue[] = [];
+  for (const issue of source) {
+    copied = append(copied, issue);
+  }
+  return copied;
+}

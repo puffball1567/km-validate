@@ -1,0 +1,16 @@
+import { newValidator } from "../../validate";
+import go fmt from "fmt";
+
+function main(): void {
+  const validator = newValidator();
+  const [nameError] = validator.required("user.name", "  ");
+  const [emailError] = validator.email("user.email", "not-an-email");
+  const [ageError] = validator.integerRange("user.age", 15, 18, 120);
+  if (nameError !== nil || emailError !== nil || ageError !== nil) {
+    fmt.Println("validator configuration error");
+    return;
+  }
+  for (const issue of validator.all()) {
+    fmt.Printf("%s:%s\n", issue.field, issue.code);
+  }
+}
