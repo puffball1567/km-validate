@@ -15,7 +15,8 @@ libraries designed around Kinmokusei APIs.
 ## Features
 
 - Structured `field`, `code`, and `message` issues
-- Required, Unicode-aware length, regular-expression, email, and HTTP URL rules
+- Required, Unicode-aware length, comparison, containment, and regular-expression rules
+- Email, HTTP URL, IP address, CIDR, UUID, and RFC3339 timestamp rules
 - Choice, inclusive integer-range, and finite number-range rules
 - Multiple accumulated issues with per-field queries
 - Atomic batch addition and independent issue snapshots
@@ -67,6 +68,9 @@ path. Configuration errors never partially mutate the validator.
 
 - `required` rejects empty or whitespace-only text.
 - `minLength`, `maxLength`, and `lengthRange` count Unicode code points.
+- `exactLength` checks an exact Unicode code-point count.
+- `equal`, `notEqual`, `contains`, `startsWith`, and `endsWith` use exact,
+  case-sensitive string comparisons.
 - `matches` uses Go regular expressions and returns malformed patterns.
 - `email` accepts a bare address and rejects display-name forms.
 - `httpURL` accepts absolute HTTP and HTTPS URLs with a host.
@@ -74,6 +78,9 @@ path. Configuration errors never partially mutate the validator.
 - `integerRange` and `numberRange` use inclusive bounds.
 - `numberRange` records `finite_number` for NaN and infinities while requiring
   finite ordered bounds.
+- `ipAddress` accepts IPv4 and IPv6 addresses, while `cidr` requires a prefix.
+- `uuid` accepts the canonical 36-character hexadecimal representation.
+- `timestamp` accepts RFC3339 timestamps including offsets and fractional seconds.
 
 `all` and `forField` return independent slices. `addAll` validates an entire
 batch before adding anything. A `Validator` is intended for one validation
@@ -82,7 +89,7 @@ operation and is not safe for concurrent mutation.
 ## Development
 
 Run source checks, static analysis, the complete rule/configuration/boundary
-matrix, 100% generated-Go statement coverage, the race detector, four fuzz
+matrix, 100% generated-Go statement coverage, the race detector, five fuzz
 targets, the executable example, and an independent short-import consumer:
 
 ```sh

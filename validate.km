@@ -1,10 +1,12 @@
 import go errors from "errors";
 import go fmt from "fmt";
 import go math from "math";
+import go net from "net";
 import go mail from "net/mail";
 import go url from "net/url";
 import go regexp from "regexp";
 import go strings from "strings";
+import go time from "time";
 import go utf8 from "unicode/utf8";
 
 export struct Issue {
@@ -116,6 +118,66 @@ export class Validator {
     return ok();
   }
 
+  public function exactLength(field: string, value: string, expected: int): Result<void> {
+    validatePath(field)?;
+    if (expected < 0) {
+      return fail(errors.New("expected length must not be negative"));
+    }
+    if (utf8.RuneCountInString(value) != expected) {
+      this.problems = append(this.problems, newIssue(field, "exact_length", fmt.Sprintf("%s must contain exactly %d characters", field, expected)));
+    }
+    return ok();
+  }
+
+  public function equal(field: string, value: string, expected: string): Result<void> {
+    validatePath(field)?;
+    if (value != expected) {
+      this.problems = append(this.problems, newIssue(field, "equal", field + " must equal the expected value"));
+    }
+    return ok();
+  }
+
+  public function notEqual(field: string, value: string, disallowed: string): Result<void> {
+    validatePath(field)?;
+    if (value == disallowed) {
+      this.problems = append(this.problems, newIssue(field, "not_equal", field + " must not equal the disallowed value"));
+    }
+    return ok();
+  }
+
+  public function contains(field: string, value: string, substring: string): Result<void> {
+    validatePath(field)?;
+    if (substring == "") {
+      return fail(errors.New("required substring must not be empty"));
+    }
+    if (!strings.Contains(value, substring)) {
+      this.problems = append(this.problems, newIssue(field, "contains", field + " must contain the required text"));
+    }
+    return ok();
+  }
+
+  public function startsWith(field: string, value: string, prefix: string): Result<void> {
+    validatePath(field)?;
+    if (prefix == "") {
+      return fail(errors.New("required prefix must not be empty"));
+    }
+    if (!strings.HasPrefix(value, prefix)) {
+      this.problems = append(this.problems, newIssue(field, "starts_with", field + " must start with the required text"));
+    }
+    return ok();
+  }
+
+  public function endsWith(field: string, value: string, suffix: string): Result<void> {
+    validatePath(field)?;
+    if (suffix == "") {
+      return fail(errors.New("required suffix must not be empty"));
+    }
+    if (!strings.HasSuffix(value, suffix)) {
+      this.problems = append(this.problems, newIssue(field, "ends_with", field + " must end with the required text"));
+    }
+    return ok();
+  }
+
   public function matches(field: string, value: string, pattern: string): Result<void> {
     validatePath(field)?;
     const expression = regexp.Compile(pattern)?;
@@ -180,6 +242,40 @@ export class Validator {
     }
     return ok();
   }
+
+  public function ipAddress(field: string, value: string): Result<void> {
+    validatePath(field)?;
+    if (net.ParseIP(value) === nil) {
+      this.problems = append(this.problems, newIssue(field, "ip_address", field + " must be a valid IP address"));
+    }
+    return ok();
+  }
+
+  public function cidr(field: string, value: string): Result<void> {
+    validatePath(field)?;
+    const [_, _, parseError] = net.ParseCIDR(value);
+    if (parseError !== nil) {
+      this.problems = append(this.problems, newIssue(field, "cidr", field + " must be valid CIDR notation"));
+    }
+    return ok();
+  }
+
+  public function uuid(field: string, value: string): Result<void> {
+    validatePath(field)?;
+    if (!validUUID(value)) {
+      this.problems = append(this.problems, newIssue(field, "uuid", field + " must be a valid UUID"));
+    }
+    return ok();
+  }
+
+  public function timestamp(field: string, value: string): Result<void> {
+    validatePath(field)?;
+    const [_, parseError] = time.Parse(time.RFC3339, value);
+    if (parseError !== nil) {
+      this.problems = append(this.problems, newIssue(field, "timestamp", field + " must be an RFC3339 timestamp"));
+    }
+    return ok();
+  }
 }
 
 export function newValidator(): Validator {
@@ -239,6 +335,27 @@ function validateIssue(issue: Issue): Result<void> {
 
 function finite(value: float64): boolean {
   return !math.IsNaN(value) && !math.IsInf(value, 0);
+}
+
+function validUUID(value: string): boolean {
+  if (len(value) != 36) {
+    return false;
+  }
+  for (let index = 0; index < len(value); index++) {
+    const character = value[index:index + 1];
+    if (index == 8 || index == 13 || index == 18 || index == 23) {
+      if (character != "-") {
+        return false;
+      }
+    } else if (!hexDigit(character)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function hexDigit(character: string): boolean {
+  return (character >= "0" && character <= "9") || (character >= "a" && character <= "f") || (character >= "A" && character <= "F");
 }
 
 function newIssue(field: string, code: string, message: string): Issue {
