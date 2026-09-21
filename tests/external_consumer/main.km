@@ -5,7 +5,8 @@ function main(): void {
   const validator = newValidator();
   const [nameError] = validator.minLength("name", "金木犀", 3);
   const [siteError] = validator.httpURL("site", "https://example.com");
-  if (nameError !== nil || siteError !== nil) {
+  const [idError] = validator.uuid("id", "550e8400-e29b-41d4-a716-446655440000");
+  if (nameError !== nil || siteError !== nil || idError !== nil) {
     fmt.Println("configuration error");
     return;
   }

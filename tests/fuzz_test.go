@@ -48,10 +48,38 @@ func FuzzStructuredRulesNeverPanic(f *testing.F) {
 		emailValidator := NewValidator()
 		urlValidator := NewValidator()
 		patternValidator := NewValidator()
+		ipValidator := NewValidator()
+		cidrValidator := NewValidator()
+		uuidValidator := NewValidator()
+		timestampValidator := NewValidator()
 		_ = emailValidator.Email(field, emailValue)
 		_ = urlValidator.HttpURL(field, urlValue)
 		_ = patternValidator.Matches(field, value, pattern)
-		for index, validator := range []*Validator{emailValidator, urlValidator, patternValidator} {
+		_ = ipValidator.IpAddress(field, value)
+		_ = cidrValidator.Cidr(field, value)
+		_ = uuidValidator.Uuid(field, value)
+		_ = timestampValidator.Timestamp(field, value)
+		for index, validator := range []*Validator{emailValidator, urlValidator, patternValidator, ipValidator, cidrValidator, uuidValidator, timestampValidator} {
+			if validator.Size() > 1 {
+				t.Fatalf("rule %d recorded multiple issues: %#v", index, validator.All())
+			}
+		}
+	})
+}
+
+func FuzzComparisonRulesNeverPanic(f *testing.F) {
+	f.Add("field", "金木犀の香り", "金木犀", 3)
+	f.Add("bad path", "", "", -1)
+	f.Fuzz(func(t *testing.T, field, value, expected string, length int) {
+		validators := []*Validator{NewValidator(), NewValidator(), NewValidator(), NewValidator(), NewValidator(), NewValidator(), NewValidator()}
+		_ = validators[0].ExactLength(field, value, length)
+		_ = validators[1].Equal(field, value, expected)
+		_ = validators[2].NotEqual(field, value, expected)
+		_ = validators[3].Contains(field, value, expected)
+		_ = validators[4].StartsWith(field, value, expected)
+		_ = validators[5].EndsWith(field, value, expected)
+		_ = validators[6].Uuid(field, value)
+		for index, validator := range validators {
 			if validator.Size() > 1 {
 				t.Fatalf("rule %d recorded multiple issues: %#v", index, validator.All())
 			}

@@ -31,6 +31,7 @@ GOCACHE="$go_cache" go test -run='^$' -fuzz='^FuzzRejectIsAtomic$' -fuzztime=1s
 GOCACHE="$go_cache" go test -run='^$' -fuzz='^FuzzTextRulesNeverPanic$' -fuzztime=1s
 GOCACHE="$go_cache" go test -run='^$' -fuzz='^FuzzStructuredRulesNeverPanic$' -fuzztime=1s
 GOCACHE="$go_cache" go test -run='^$' -fuzz='^FuzzAddAllIsAtomic$' -fuzztime=1s
+GOCACHE="$go_cache" go test -run='^$' -fuzz='^FuzzComparisonRulesNeverPanic$' -fuzztime=1s
 
 cd "$project_dir"
 "$keika_command" build -o "$test_dir/basic-example" examples/basic/main.km
