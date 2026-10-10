@@ -1,6 +1,10 @@
 package validate
 
-import "testing"
+import (
+	"reflect"
+	"strings"
+	"testing"
+)
 
 func FuzzRejectIsAtomic(f *testing.F) {
 	f.Add("user.name", "custom_code", "message")
@@ -104,6 +108,59 @@ func FuzzAddAllIsAtomic(f *testing.F) {
 		}
 		if validator.Size() != 2 {
 			t.Fatalf("successful AddAll size = %d", validator.Size())
+		}
+	})
+}
+
+func FuzzEachIsAtomic(f *testing.F) {
+	f.Add("contacts", "", "user@example.com", false)
+	f.Add("contacts.0", "bad", "bad", true)
+	f.Add("bad path", "", "", false)
+	f.Fuzz(func(t *testing.T, field, first, second string, failLast bool) {
+		v := NewValidator()
+		_ = v.Required("existing", "")
+		before := v.All()
+		calls := 0
+		err := each(v, field, []string{first, second}, func(items *Validator, path, value string) error {
+			calls++
+			if failLast && calls == 2 {
+				return items.Matches(path, value, "[")
+			}
+			return items.Email(path, value)
+		})
+		if err != nil {
+			if !reflect.DeepEqual(before, v.All()) {
+				t.Fatalf("error mutated validator: %v", v.All())
+			}
+			return
+		}
+		if calls != 2 || v.Size() < 1 || v.Size() > 3 {
+			t.Fatalf("calls %d issues %v", calls, v.All())
+		}
+		for _, issue := range v.All()[1:] {
+			if !strings.HasPrefix(issue.Field, field+".") {
+				t.Fatalf("wrong index path: %v", issue)
+			}
+		}
+	})
+}
+
+func FuzzFileRuleIsAtomic(f *testing.F) {
+	f.Add("avatar", []byte("hello"), int64(5), "text/plain")
+	f.Add("avatar", []byte{0x89, 'P', 'N', 'G', 13, 10, 26, 10}, int64(7), "image/png")
+	f.Add("bad path", []byte{}, int64(-1), "[")
+	f.Fuzz(func(t *testing.T, field string, content []byte, maximum int64, mediaType string) {
+		v := NewValidator()
+		_ = v.Required("existing", "")
+		before := v.All()
+		if err := v.File(field, content, maximum, []string{mediaType}); err != nil {
+			if !reflect.DeepEqual(before, v.All()) {
+				t.Fatalf("configuration error mutated validator: %v", v.All())
+			}
+			return
+		}
+		if v.Size() < 1 || v.Size() > 2 {
+			t.Fatalf("issues %v", v.All())
 		}
 	})
 }

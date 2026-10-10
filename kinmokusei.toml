@@ -1,6 +1,6 @@
 [project]
 name = "km-validate"
-version = "0.1.0"
+version = "0.2.0"
 go-module = "github.com/puffball1567/km-validate"
 go-version = "1.23"
 
