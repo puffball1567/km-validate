@@ -1,4 +1,4 @@
-import { newValidator } from "km-validate";
+import { newValidator, Validator, each } from "km-validate";
 import go fmt from "fmt";
 
 function main(): void {
@@ -6,6 +6,19 @@ function main(): void {
   const [nameError] = validator.minLength("name", "金木犀", 3);
   const [siteError] = validator.httpURL("site", "https://example.com");
   const [idError] = validator.uuid("id", "550e8400-e29b-41d4-a716-446655440000");
+  const [conditionalError] = validator.requiredUnless("company", "", true);
+  const [compareError] = validator.compareInteger("end", 20, ">=", "start", 10);
+  const [arrayError] = each<string>(validator, "emails", ["user@example.com"], (items: Validator, field: string, value: string): Result<void> => {
+    return items.email(field, value);
+  });
+  const content: byte[] = [104, 101, 108, 108, 111];
+  const [fileError] = validator.file("attachment", content, 5, ["text/plain"]);
+  const [uniqueError] = validator.unique("email", (): Result<boolean> => { return ok(false); });
+  const [existsError] = validator.exists("team_id", (): Result<boolean> => { return ok(true); });
+  if (conditionalError !== nil || compareError !== nil || arrayError !== nil || fileError !== nil || uniqueError !== nil || existsError !== nil) {
+    fmt.Println("form configuration error");
+    return;
+  }
   if (nameError !== nil || siteError !== nil || idError !== nil) {
     fmt.Println("configuration error");
     return;
