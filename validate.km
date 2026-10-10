@@ -1,5 +1,7 @@
 import go errors from "errors";
 import go fmt from "fmt";
+import go mime from "mime";
+import go http from "net/http";
 import go math from "math";
 import go net from "net";
 import go mail from "net/mail";
@@ -81,6 +83,157 @@ export class Validator {
     if (strings.TrimSpace(value) == "") {
       this.problems = append(this.problems, newIssue(field, "required", field + " is required"));
     }
+    return ok();
+  }
+
+  public function requiredIf(field: string, value: string, condition: boolean): Result<void> {
+    validatePath(field)?;
+    if (condition && strings.TrimSpace(value) == "") {
+      this.problems = append(this.problems, newIssue(field, "required_if", field + " is required under this condition"));
+    }
+    return ok();
+  }
+
+  public function requiredUnless(field: string, value: string, condition: boolean): Result<void> {
+    validatePath(field)?;
+    if (!condition && strings.TrimSpace(value) == "") {
+      this.problems = append(this.problems, newIssue(field, "required_unless", field + " is required unless the condition holds"));
+    }
+    return ok();
+  }
+
+  public function requiredWith(field: string, value: string, others: string[]): Result<void> {
+    validatePath(field)?;
+    validateRelated(others)?;
+    for (const other of others) {
+      if (strings.TrimSpace(other) != "") {
+        if (strings.TrimSpace(value) == "") {
+          this.problems = append(this.problems, newIssue(field, "required_with", field + " is required with related values"));
+        }
+        return ok();
+      }
+    }
+    return ok();
+  }
+
+  public function requiredWithout(field: string, value: string, others: string[]): Result<void> {
+    validatePath(field)?;
+    validateRelated(others)?;
+    for (const other of others) {
+      if (strings.TrimSpace(other) == "") {
+        if (strings.TrimSpace(value) == "") {
+          this.problems = append(this.problems, newIssue(field, "required_without", field + " is required without related values"));
+        }
+        return ok();
+      }
+    }
+    return ok();
+  }
+
+  public function same(field: string, value: string, otherField: string, otherValue: string): Result<void> {
+    validatePath(field)?;
+    validatePath(otherField)?;
+    if (value != otherValue) {
+      this.problems = append(this.problems, newIssue(field, "same", field + " must match " + otherField));
+    }
+    return ok();
+  }
+
+  public function different(field: string, value: string, otherField: string, otherValue: string): Result<void> {
+    validatePath(field)?;
+    validatePath(otherField)?;
+    if (value == otherValue) {
+      this.problems = append(this.problems, newIssue(field, "different", field + " must differ from " + otherField));
+    }
+    return ok();
+  }
+
+  public function compareInteger(field: string, value: int64, operator: string, otherField: string, otherValue: int64): Result<void> {
+    validatePath(field)?;
+    validatePath(otherField)?;
+    validateOperator(operator)?;
+    if (!orderedComparison(value < otherValue, value == otherValue, operator)) {
+      this.problems = append(this.problems, newIssue(field, "compare_integer", field + " must be " + operator + " " + otherField));
+    }
+    return ok();
+  }
+
+  public function compareNumber(field: string, value: float64, operator: string, otherField: string, otherValue: float64): Result<void> {
+    validatePath(field)?;
+    validatePath(otherField)?;
+    validateOperator(operator)?;
+    if (!finite(otherValue)) {
+      return fail(errors.New("comparison value must be finite"));
+    }
+    if (!finite(value)) {
+      this.problems = append(this.problems, newIssue(field, "finite_number", field + " must be a finite number"));
+    } else if (!orderedComparison(value < otherValue, value == otherValue, operator)) {
+      this.problems = append(this.problems, newIssue(field, "compare_number", field + " must be " + operator + " " + otherField));
+    }
+    return ok();
+  }
+
+  public function arrayLength(field: string, count: int, minimum: int, maximum: int): Result<void> {
+    validatePath(field)?;
+    if (count < 0 || minimum < 0 || maximum < minimum) {
+      return fail(errors.New("array length and bounds must be non-negative and ordered"));
+    }
+    if (count < minimum || count > maximum) {
+      this.problems = append(this.problems, newIssue(field, "array_length", fmt.Sprintf("%s must contain between %d and %d items", field, minimum, maximum)));
+    }
+    return ok();
+  }
+
+  public function unique(field: string, lookup: () => Result<boolean>): Result<void> {
+    validatePath(field)?;
+    if (lookup == nil) {
+      return fail(errors.New("uniqueness lookup must not be nil"));
+    }
+    const found = lookup()?;
+    if (found) {
+      this.problems = append(this.problems, newIssue(field, "unique", field + " is already in use"));
+    }
+    return ok();
+  }
+
+  public function exists(field: string, lookup: () => Result<boolean>): Result<void> {
+    validatePath(field)?;
+    if (lookup == nil) {
+      return fail(errors.New("existence lookup must not be nil"));
+    }
+    const found = lookup()?;
+    if (!found) {
+      this.problems = append(this.problems, newIssue(field, "exists", field + " does not reference an existing record"));
+    }
+    return ok();
+  }
+
+  public function file(field: string, content: byte[], maximumBytes: int64, allowedTypes: string[]): Result<void> {
+    validatePath(field)?;
+    if (maximumBytes < 0 || len(allowedTypes) == 0) {
+      return fail(errors.New("file limit must be non-negative and allowed media types must not be empty"));
+    }
+    let normalized: string[] = [];
+    for (const allowed of allowedTypes) {
+      const [mediaType, parameters, parseError] = mime.ParseMediaType(allowed);
+      if (parseError !== nil || len(parameters) != 0 || strings.Contains(mediaType, "*") || !strings.Contains(mediaType, "/")) {
+        return fail(errors.New("allowed media types must be exact MIME types without parameters"));
+      }
+      normalized = append(normalized, mediaType);
+    }
+    if (content == nil) {
+      this.problems = append(this.problems, newIssue(field, "required_file", field + " requires a file"));
+      return ok();
+    }
+    if (int64(len(content)) > maximumBytes) {
+      this.problems = append(this.problems, newIssue(field, "file_size", fmt.Sprintf("%s must not exceed %d bytes", field, maximumBytes)));
+      return ok();
+    }
+    const detected = strings.Split(http.DetectContentType(content), ";")[0];
+    for (const allowed of normalized) {
+      if (detected == allowed) { return ok(); }
+    }
+    this.problems = append(this.problems, newIssue(field, "file_type", field + " must have an allowed content type"));
     return ok();
   }
 
@@ -286,6 +439,21 @@ function validatePath(field: string): Result<void> {
   if (len(field) == 0 || strings.TrimSpace(field) != field) {
     return fail(errors.New("validation field path must not be empty or surrounded by whitespace"));
   }
+  if (field[0:1] >= "0" && field[0:1] <= "9") {
+    return fail(errors.New("validation field path must start with an identifier"));
+  }
+  for (const segment of strings.Split(field, ".")) {
+    if (len(segment) > 0 && segment[0:1] >= "0" && segment[0:1] <= "9") {
+      if (len(segment) > 1 && segment[0:1] == "0") {
+        return fail(errors.New("array indexes must not have leading zeros"));
+      }
+      for (let index = 0; index < len(segment); index++) {
+        if (segment[index:index + 1] < "0" || segment[index:index + 1] > "9") {
+          return fail(errors.New("array indexes must contain only digits"));
+        }
+      }
+    }
+  }
   let segmentStart = true;
   for (let index = 0; index < len(field); index++) {
     const character = field[index:index + 1];
@@ -297,7 +465,7 @@ function validatePath(field: string): Result<void> {
     } else {
       const letter = (character >= "a" && character <= "z") || (character >= "A" && character <= "Z");
       const digit = character >= "0" && character <= "9";
-      if ((segmentStart && !letter && character != "_") || (!segmentStart && !letter && !digit && character != "_" && character != "-")) {
+      if ((segmentStart && !letter && !digit && character != "_") || (!segmentStart && !letter && !digit && character != "_" && character != "-")) {
         return fail(fmt.Errorf("invalid validation field path %q", field));
       }
       segmentStart = false;
@@ -372,4 +540,38 @@ function copyIssues(source: Issue[]): Issue[] {
     copied = append(copied, issue);
   }
   return copied;
+}
+
+function validateRelated(values: string[]): Result<void> {
+  if (len(values) == 0) { return fail(errors.New("related values must not be empty")); }
+  return ok();
+}
+
+function validateOperator(operator: string): Result<void> {
+  if (operator != "<" && operator != "<=" && operator != ">" && operator != ">=" && operator != "==" && operator != "!=") {
+    return fail(errors.New("comparison operator must be <, <=, >, >=, ==, or !="));
+  }
+  return ok();
+}
+
+function orderedComparison(less: boolean, equal: boolean, operator: string): boolean {
+  if (operator == "<") { return less; }
+  if (operator == "<=") { return less || equal; }
+  if (operator == ">") { return !less && !equal; }
+  if (operator == ">=") { return !less; }
+  if (operator == "==") { return equal; }
+  return !equal;
+}
+
+export function each<T>(validator: Validator, field: string, values: T[], rule: (validator: Validator, field: string, value: T) => Result<void>): Result<void> {
+  validatePath(field)?;
+  if (validator == nil || rule == nil) {
+    return fail(errors.New("array validator and rule must not be nil"));
+  }
+  const pending = newValidator();
+  for (let index = 0; index < len(values); index++) {
+    const itemField = fmt.Sprintf("%s.%d", field, index);
+    rule(pending, itemField, values[index])?;
+  }
+  return validator.addAll(pending.all());
 }
