@@ -12,9 +12,9 @@ import go time from "time";
 import go utf8 from "unicode/utf8";
 
 export struct Issue {
-  public field: string;
-  public code: string;
-  public message: string;
+  public field: bstring;
+  public code: bstring;
+  public message: bstring;
 }
 
 export class Validator {
@@ -40,7 +40,7 @@ export class Validator {
     this.problems = [];
   }
 
-  public function forField(field: string): Result<Issue[]> {
+  public function forField(field: bstring): Result<Issue[]> {
     validatePath(field)?;
     let matches: Issue[] = [];
     for (const issue of this.problems) {
@@ -51,7 +51,7 @@ export class Validator {
     return ok(matches);
   }
 
-  public function has(field: string): Result<boolean> {
+  public function has(field: bstring): Result<boolean> {
     validatePath(field)?;
     for (const issue of this.problems) {
       if (issue.field == field) {
@@ -71,14 +71,14 @@ export class Validator {
     return ok();
   }
 
-  public function reject(field: string, code: string, message: string): Result<void> {
+  public function reject(field: bstring, code: bstring, message: bstring): Result<void> {
     const issue = newIssue(field, code, message);
     validateIssue(issue)?;
     this.problems = append(this.problems, issue);
     return ok();
   }
 
-  public function required(field: string, value: string): Result<void> {
+  public function required(field: bstring, value: bstring): Result<void> {
     validatePath(field)?;
     if (strings.TrimSpace(value) == "") {
       this.problems = append(this.problems, newIssue(field, "required", field + " is required"));
@@ -86,7 +86,7 @@ export class Validator {
     return ok();
   }
 
-  public function requiredIf(field: string, value: string, condition: boolean): Result<void> {
+  public function requiredIf(field: bstring, value: bstring, condition: boolean): Result<void> {
     validatePath(field)?;
     if (condition && strings.TrimSpace(value) == "") {
       this.problems = append(this.problems, newIssue(field, "required_if", field + " is required under this condition"));
@@ -94,7 +94,7 @@ export class Validator {
     return ok();
   }
 
-  public function requiredUnless(field: string, value: string, condition: boolean): Result<void> {
+  public function requiredUnless(field: bstring, value: bstring, condition: boolean): Result<void> {
     validatePath(field)?;
     if (!condition && strings.TrimSpace(value) == "") {
       this.problems = append(this.problems, newIssue(field, "required_unless", field + " is required unless the condition holds"));
@@ -102,7 +102,7 @@ export class Validator {
     return ok();
   }
 
-  public function requiredWith(field: string, value: string, others: string[]): Result<void> {
+  public function requiredWith(field: bstring, value: bstring, others: bstring[]): Result<void> {
     validatePath(field)?;
     validateRelated(others)?;
     for (const other of others) {
@@ -116,7 +116,7 @@ export class Validator {
     return ok();
   }
 
-  public function requiredWithout(field: string, value: string, others: string[]): Result<void> {
+  public function requiredWithout(field: bstring, value: bstring, others: bstring[]): Result<void> {
     validatePath(field)?;
     validateRelated(others)?;
     for (const other of others) {
@@ -130,7 +130,7 @@ export class Validator {
     return ok();
   }
 
-  public function same(field: string, value: string, otherField: string, otherValue: string): Result<void> {
+  public function same(field: bstring, value: bstring, otherField: bstring, otherValue: bstring): Result<void> {
     validatePath(field)?;
     validatePath(otherField)?;
     if (value != otherValue) {
@@ -139,7 +139,7 @@ export class Validator {
     return ok();
   }
 
-  public function different(field: string, value: string, otherField: string, otherValue: string): Result<void> {
+  public function different(field: bstring, value: bstring, otherField: bstring, otherValue: bstring): Result<void> {
     validatePath(field)?;
     validatePath(otherField)?;
     if (value == otherValue) {
@@ -148,7 +148,7 @@ export class Validator {
     return ok();
   }
 
-  public function compareInteger(field: string, value: int64, operator: string, otherField: string, otherValue: int64): Result<void> {
+  public function compareInteger(field: bstring, value: int64, operator: bstring, otherField: bstring, otherValue: int64): Result<void> {
     validatePath(field)?;
     validatePath(otherField)?;
     validateOperator(operator)?;
@@ -158,7 +158,7 @@ export class Validator {
     return ok();
   }
 
-  public function compareNumber(field: string, value: float64, operator: string, otherField: string, otherValue: float64): Result<void> {
+  public function compareNumber(field: bstring, value: float64, operator: bstring, otherField: bstring, otherValue: float64): Result<void> {
     validatePath(field)?;
     validatePath(otherField)?;
     validateOperator(operator)?;
@@ -173,7 +173,7 @@ export class Validator {
     return ok();
   }
 
-  public function arrayLength(field: string, count: int, minimum: int, maximum: int): Result<void> {
+  public function arrayLength(field: bstring, count: int, minimum: int, maximum: int): Result<void> {
     validatePath(field)?;
     if (count < 0 || minimum < 0 || maximum < minimum) {
       return fail(errors.New("array length and bounds must be non-negative and ordered"));
@@ -184,7 +184,7 @@ export class Validator {
     return ok();
   }
 
-  public function unique(field: string, lookup: () => Result<boolean>): Result<void> {
+  public function unique(field: bstring, lookup: () => Result<boolean>): Result<void> {
     validatePath(field)?;
     if (lookup == nil) {
       return fail(errors.New("uniqueness lookup must not be nil"));
@@ -196,7 +196,7 @@ export class Validator {
     return ok();
   }
 
-  public function exists(field: string, lookup: () => Result<boolean>): Result<void> {
+  public function exists(field: bstring, lookup: () => Result<boolean>): Result<void> {
     validatePath(field)?;
     if (lookup == nil) {
       return fail(errors.New("existence lookup must not be nil"));
@@ -208,12 +208,12 @@ export class Validator {
     return ok();
   }
 
-  public function file(field: string, content: byte[], maximumBytes: int64, allowedTypes: string[]): Result<void> {
+  public function file(field: bstring, content: byte[], maximumBytes: int64, allowedTypes: bstring[]): Result<void> {
     validatePath(field)?;
     if (maximumBytes < 0 || len(allowedTypes) == 0) {
       return fail(errors.New("file limit must be non-negative and allowed media types must not be empty"));
     }
-    let normalized: string[] = [];
+    let normalized: bstring[] = [];
     for (const allowed of allowedTypes) {
       const [mediaType, parameters, parseError] = mime.ParseMediaType(allowed);
       if (parseError !== nil || len(parameters) != 0 || strings.Contains(mediaType, "*") || !strings.Contains(mediaType, "/")) {
@@ -237,7 +237,7 @@ export class Validator {
     return ok();
   }
 
-  public function minLength(field: string, value: string, minimum: int): Result<void> {
+  public function minLength(field: bstring, value: bstring, minimum: int): Result<void> {
     validatePath(field)?;
     if (minimum < 0) {
       return fail(errors.New("minimum length must not be negative"));
@@ -248,7 +248,7 @@ export class Validator {
     return ok();
   }
 
-  public function maxLength(field: string, value: string, maximum: int): Result<void> {
+  public function maxLength(field: bstring, value: bstring, maximum: int): Result<void> {
     validatePath(field)?;
     if (maximum < 0) {
       return fail(errors.New("maximum length must not be negative"));
@@ -259,7 +259,7 @@ export class Validator {
     return ok();
   }
 
-  public function lengthRange(field: string, value: string, minimum: int, maximum: int): Result<void> {
+  public function lengthRange(field: bstring, value: bstring, minimum: int, maximum: int): Result<void> {
     validatePath(field)?;
     if (minimum < 0 || maximum < 0 || minimum > maximum) {
       return fail(errors.New("length range must be non-negative and ordered"));
@@ -271,7 +271,7 @@ export class Validator {
     return ok();
   }
 
-  public function exactLength(field: string, value: string, expected: int): Result<void> {
+  public function exactLength(field: bstring, value: bstring, expected: int): Result<void> {
     validatePath(field)?;
     if (expected < 0) {
       return fail(errors.New("expected length must not be negative"));
@@ -282,7 +282,7 @@ export class Validator {
     return ok();
   }
 
-  public function equal(field: string, value: string, expected: string): Result<void> {
+  public function equal(field: bstring, value: bstring, expected: bstring): Result<void> {
     validatePath(field)?;
     if (value != expected) {
       this.problems = append(this.problems, newIssue(field, "equal", field + " must equal the expected value"));
@@ -290,7 +290,7 @@ export class Validator {
     return ok();
   }
 
-  public function notEqual(field: string, value: string, disallowed: string): Result<void> {
+  public function notEqual(field: bstring, value: bstring, disallowed: bstring): Result<void> {
     validatePath(field)?;
     if (value == disallowed) {
       this.problems = append(this.problems, newIssue(field, "not_equal", field + " must not equal the disallowed value"));
@@ -298,7 +298,7 @@ export class Validator {
     return ok();
   }
 
-  public function contains(field: string, value: string, substring: string): Result<void> {
+  public function contains(field: bstring, value: bstring, substring: bstring): Result<void> {
     validatePath(field)?;
     if (substring == "") {
       return fail(errors.New("required substring must not be empty"));
@@ -309,7 +309,7 @@ export class Validator {
     return ok();
   }
 
-  public function startsWith(field: string, value: string, prefix: string): Result<void> {
+  public function startsWith(field: bstring, value: bstring, prefix: bstring): Result<void> {
     validatePath(field)?;
     if (prefix == "") {
       return fail(errors.New("required prefix must not be empty"));
@@ -320,7 +320,7 @@ export class Validator {
     return ok();
   }
 
-  public function endsWith(field: string, value: string, suffix: string): Result<void> {
+  public function endsWith(field: bstring, value: bstring, suffix: bstring): Result<void> {
     validatePath(field)?;
     if (suffix == "") {
       return fail(errors.New("required suffix must not be empty"));
@@ -331,7 +331,7 @@ export class Validator {
     return ok();
   }
 
-  public function matches(field: string, value: string, pattern: string): Result<void> {
+  public function matches(field: bstring, value: bstring, pattern: bstring): Result<void> {
     validatePath(field)?;
     const expression = regexp.Compile(pattern)?;
     if (!expression.MatchString(value)) {
@@ -340,7 +340,7 @@ export class Validator {
     return ok();
   }
 
-  public function email(field: string, value: string): Result<void> {
+  public function email(field: bstring, value: bstring): Result<void> {
     validatePath(field)?;
     const [address, parseError] = mail.ParseAddress(value);
     if (parseError !== nil || address.Address != value) {
@@ -349,7 +349,7 @@ export class Validator {
     return ok();
   }
 
-  public function httpURL(field: string, value: string): Result<void> {
+  public function httpURL(field: bstring, value: bstring): Result<void> {
     validatePath(field)?;
     const [parsed, parseError] = url.ParseRequestURI(value);
     if (parseError !== nil || (strings.ToLower(parsed.Scheme) != "http" && strings.ToLower(parsed.Scheme) != "https") || parsed.Host == "") {
@@ -358,7 +358,7 @@ export class Validator {
     return ok();
   }
 
-  public function oneOf(field: string, value: string, choices: string[]): Result<void> {
+  public function oneOf(field: bstring, value: bstring, choices: bstring[]): Result<void> {
     validatePath(field)?;
     if (len(choices) == 0) {
       return fail(errors.New("choices must not be empty"));
@@ -372,7 +372,7 @@ export class Validator {
     return ok();
   }
 
-  public function integerRange(field: string, value: int64, minimum: int64, maximum: int64): Result<void> {
+  public function integerRange(field: bstring, value: int64, minimum: int64, maximum: int64): Result<void> {
     validatePath(field)?;
     if (minimum > maximum) {
       return fail(errors.New("integer range must be ordered"));
@@ -383,7 +383,7 @@ export class Validator {
     return ok();
   }
 
-  public function numberRange(field: string, value: float64, minimum: float64, maximum: float64): Result<void> {
+  public function numberRange(field: bstring, value: float64, minimum: float64, maximum: float64): Result<void> {
     validatePath(field)?;
     if (!finite(minimum) || !finite(maximum) || minimum > maximum) {
       return fail(errors.New("number range bounds must be finite and ordered"));
@@ -396,7 +396,7 @@ export class Validator {
     return ok();
   }
 
-  public function ipAddress(field: string, value: string): Result<void> {
+  public function ipAddress(field: bstring, value: bstring): Result<void> {
     validatePath(field)?;
     if (net.ParseIP(value) === nil) {
       this.problems = append(this.problems, newIssue(field, "ip_address", field + " must be a valid IP address"));
@@ -404,7 +404,7 @@ export class Validator {
     return ok();
   }
 
-  public function cidr(field: string, value: string): Result<void> {
+  public function cidr(field: bstring, value: bstring): Result<void> {
     validatePath(field)?;
     const [_, _, parseError] = net.ParseCIDR(value);
     if (parseError !== nil) {
@@ -413,7 +413,7 @@ export class Validator {
     return ok();
   }
 
-  public function uuid(field: string, value: string): Result<void> {
+  public function uuid(field: bstring, value: bstring): Result<void> {
     validatePath(field)?;
     if (!validUUID(value)) {
       this.problems = append(this.problems, newIssue(field, "uuid", field + " must be a valid UUID"));
@@ -421,7 +421,7 @@ export class Validator {
     return ok();
   }
 
-  public function timestamp(field: string, value: string): Result<void> {
+  public function timestamp(field: bstring, value: bstring): Result<void> {
     validatePath(field)?;
     const [_, parseError] = time.Parse(time.RFC3339, value);
     if (parseError !== nil) {
@@ -435,7 +435,7 @@ export function newValidator(): Validator {
   return new Validator();
 }
 
-function validatePath(field: string): Result<void> {
+function validatePath(field: bstring): Result<void> {
   if (len(field) == 0 || strings.TrimSpace(field) != field) {
     return fail(errors.New("validation field path must not be empty or surrounded by whitespace"));
   }
@@ -477,7 +477,7 @@ function validatePath(field: string): Result<void> {
   return ok();
 }
 
-function validateCode(code: string): Result<void> {
+function validateCode(code: bstring): Result<void> {
   if (len(code) == 0) {
     return fail(errors.New("validation issue code must not be empty"));
   }
@@ -505,7 +505,7 @@ function finite(value: float64): boolean {
   return !math.IsNaN(value) && !math.IsInf(value, 0);
 }
 
-function validUUID(value: string): boolean {
+function validUUID(value: bstring): boolean {
   if (len(value) != 36) {
     return false;
   }
@@ -522,11 +522,11 @@ function validUUID(value: string): boolean {
   return true;
 }
 
-function hexDigit(character: string): boolean {
+function hexDigit(character: bstring): boolean {
   return (character >= "0" && character <= "9") || (character >= "a" && character <= "f") || (character >= "A" && character <= "F");
 }
 
-function newIssue(field: string, code: string, message: string): Issue {
+function newIssue(field: bstring, code: bstring, message: bstring): Issue {
   return Issue {
     field: field,
     code: code,
@@ -542,19 +542,19 @@ function copyIssues(source: Issue[]): Issue[] {
   return copied;
 }
 
-function validateRelated(values: string[]): Result<void> {
+function validateRelated(values: bstring[]): Result<void> {
   if (len(values) == 0) { return fail(errors.New("related values must not be empty")); }
   return ok();
 }
 
-function validateOperator(operator: string): Result<void> {
+function validateOperator(operator: bstring): Result<void> {
   if (operator != "<" && operator != "<=" && operator != ">" && operator != ">=" && operator != "==" && operator != "!=") {
     return fail(errors.New("comparison operator must be <, <=, >, >=, ==, or !="));
   }
   return ok();
 }
 
-function orderedComparison(less: boolean, equal: boolean, operator: string): boolean {
+function orderedComparison(less: boolean, equal: boolean, operator: bstring): boolean {
   if (operator == "<") { return less; }
   if (operator == "<=") { return less || equal; }
   if (operator == ">") { return !less && !equal; }
@@ -563,7 +563,7 @@ function orderedComparison(less: boolean, equal: boolean, operator: string): boo
   return !equal;
 }
 
-export function each<T>(validator: Validator, field: string, values: T[], rule: (validator: Validator, field: string, value: T) => Result<void>): Result<void> {
+export function each<T>(validator: Validator, field: bstring, values: T[], rule: (validator: Validator, field: bstring, value: T) => Result<void>): Result<void> {
   validatePath(field)?;
   if (validator == nil || rule == nil) {
     return fail(errors.New("array validator and rule must not be nil"));

@@ -2,13 +2,15 @@ import { newValidator, Validator, each } from "km-validate";
 import go fmt from "fmt";
 
 function main(): void {
+  const verifiedName: string = "金木犀";
   const validator = newValidator();
-  const [nameError] = validator.minLength("name", "金木犀", 3);
+  const [nameError] = validator.minLength("name", verifiedName, 3);
   const [siteError] = validator.httpURL("site", "https://example.com");
   const [idError] = validator.uuid("id", "550e8400-e29b-41d4-a716-446655440000");
   const [conditionalError] = validator.requiredUnless("company", "", true);
   const [compareError] = validator.compareInteger("end", 20, ">=", "start", 10);
-  const [arrayError] = each<string>(validator, "emails", ["user@example.com"], (items: Validator, field: string, value: string): Result<void> => {
+  const emails: bstring[] = ["user@example.com"];
+  const [arrayError] = each<bstring>(validator, "emails", emails, (items: Validator, field: bstring, value: bstring): Result<void> => {
     return items.email(field, value);
   });
   const content: byte[] = [104, 101, 108, 108, 111];

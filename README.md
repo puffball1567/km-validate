@@ -1,5 +1,13 @@
 # km-validate
 
+## Compatibility with Kinmokusei v0.4.7
+
+This minor release requires Kinmokusei v0.4.7 or newer. Text parameters,
+results, and collections use `bstring` to preserve the previous byte-oriented
+behavior of Go strings. Scalar verified `string` arguments can still widen to
+`bstring`; collections must be declared as `bstring[]` or copied explicitly.
+Use checked `string(raw)` conversion when your application needs verified UTF-8.
+
 `km-validate` is a validation library written for Kinmokusei. It accumulates
 structured issues while keeping invalid rule configuration separate from
 ordinary user-input failures.
@@ -9,7 +17,7 @@ libraries designed around Kinmokusei APIs.
 
 ## Requirements
 
-- Kinmokusei v0.4.3 or later
+- Kinmokusei v0.4.7 or later
 - Go 1.23 or later
 
 ## Features
@@ -37,7 +45,7 @@ follow `[a-z][a-z0-9_]*`.
 ## Installation
 
 ```sh
-keika deps add github.com/puffball1567/km-validate@v0.2.0
+keika deps add github.com/puffball1567/km-validate@v0.3.0
 ```
 
 ```ts
@@ -125,11 +133,11 @@ must be finite; a non-finite submitted value adds `finite_number`.
 ```ts
 import { newValidator, Validator, each } from "km-validate";
 
-function validateContacts(emails: string[]): Result<void> {
+function validateContacts(emails: bstring[]): Result<void> {
   const validator = newValidator();
   validator.arrayLength("contacts", len(emails), 1, 10)?;
-  each<string>(validator, "contacts", emails,
-    (items: Validator, field: string, value: string): Result<void> => {
+  each<bstring>(validator, "contacts", emails,
+    (items: Validator, field: bstring, value: bstring): Result<void> => {
       items.required(field, value)?;
       return items.email(field, value);
     })?;
@@ -178,7 +186,7 @@ import go context from "context";
 import go sql from "database/sql";
 
 function validateEmail(validator: Validator, db: *sql.DB,
-    requestContext: context.Context, email: string, currentID: int64): Result<void> {
+    requestContext: context.Context, email: bstring, currentID: int64): Result<void> {
   return validator.unique("email", (): Result<boolean> => {
     let count: int64 = 0;
     const lookupError = db.QueryRowContext(requestContext,
