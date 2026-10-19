@@ -3,7 +3,7 @@ import go context from "context";
 import go sql from "database/sql";
 
 function validateEmail(validator: Validator, db: *sql.DB,
-    requestContext: context.Context, email: string, currentID: int64): Result<void> {
+    requestContext: context.Context, email: bstring, currentID: int64): Result<void> {
   return validator.unique("email", (): Result<boolean> => {
     let count: int64 = 0;
     const lookupError = db.QueryRowContext(requestContext,
