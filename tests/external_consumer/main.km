@@ -25,6 +25,17 @@ function main(): void {
     fmt.Println("configuration error");
     return;
   }
+  const [missingUniqueError] = validator.unique("email", null);
+  const [missingExistsError] = validator.exists("team_id", null);
+  const [missingRuleError] = each<bstring>(validator, "emails", emails, null);
+  const [missingValidatorError] = each<bstring>(null, "emails", emails,
+    (items: Validator, field: bstring, value: bstring): Result<void> => {
+      return items.email(field, value);
+    });
+  if (missingUniqueError === nil || missingExistsError === nil || missingRuleError === nil || missingValidatorError === nil) {
+    fmt.Println("missing validation configuration was accepted");
+    return;
+  }
   if (validator.valid()) {
     fmt.Println("valid");
   }

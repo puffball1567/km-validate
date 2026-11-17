@@ -12,23 +12,19 @@ mkdir -p "$go_cache" "$generated_dir"
 
 cd "$project_dir"
 "$keika_command" deps lock
+GOCACHE="${GOCACHE:-$test_dir/go-cache}" go test "$project_dir/scripts/check_coverage.go" "$project_dir/scripts/check_coverage_test.go"
 "$keika_command" check validate.km
 "$keika_command" check examples/basic/main.km
 "$keika_command" check examples/forms/main.km
 "$keika_command" check tests/fixtures/database_lookup.km
-"$keika_command" emit-go -package validate -o "$generated_dir/validate.go" validate.km
+"$keika_command" emit-go -package validate -o "$generated_dir/validate.go" -source-map "$generated_dir/validate.map.json" validate.km
 cp tests/*_test.go "$generated_dir/"
 
 cd "$generated_dir"
 go mod init example.com/km-validate-test >/dev/null
 GOCACHE="$go_cache" go vet ./...
 GOCACHE="$go_cache" go test -count=1 -race -coverprofile=coverage.out ./...
-coverage_total=$(GOCACHE="$go_cache" go tool cover -func=coverage.out | awk '/^total:/ { print $3 }')
-if [ "$coverage_total" != "100.0%" ]; then
-  printf 'statement coverage is %s, want 100.0%%\n' "$coverage_total" >&2
-  GOCACHE="$go_cache" go tool cover -func=coverage.out >&2
-  exit 1
-fi
+GOCACHE="$go_cache" go run "$project_dir/scripts/check_coverage.go" -- "$generated_dir/validate.go" "$generated_dir/validate.map.json" "$generated_dir/coverage.out"
 GOCACHE="$go_cache" go test -run='^$' -fuzz='^FuzzRejectIsAtomic$' -fuzztime=1s
 GOCACHE="$go_cache" go test -run='^$' -fuzz='^FuzzTextRulesNeverPanic$' -fuzztime=1s
 GOCACHE="$go_cache" go test -run='^$' -fuzz='^FuzzStructuredRulesNeverPanic$' -fuzztime=1s

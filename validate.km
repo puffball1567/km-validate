@@ -17,6 +17,9 @@ export struct Issue {
   public message: bstring;
 }
 
+export alias Lookup = () => Result<boolean>;
+export alias ElementRule<T> = (validator: Validator, field: bstring, value: T) => Result<void>;
+
 export class Validator {
   private problems: Issue[];
 
@@ -184,9 +187,9 @@ export class Validator {
     return ok();
   }
 
-  public function unique(field: bstring, lookup: () => Result<boolean>): Result<void> {
+  public function unique(field: bstring, lookup: Lookup | null): Result<void> {
     validatePath(field)?;
-    if (lookup == nil) {
+    if (lookup === null) {
       return fail(errors.New("uniqueness lookup must not be nil"));
     }
     const found = lookup()?;
@@ -196,9 +199,9 @@ export class Validator {
     return ok();
   }
 
-  public function exists(field: bstring, lookup: () => Result<boolean>): Result<void> {
+  public function exists(field: bstring, lookup: Lookup | null): Result<void> {
     validatePath(field)?;
-    if (lookup == nil) {
+    if (lookup === null) {
       return fail(errors.New("existence lookup must not be nil"));
     }
     const found = lookup()?;
@@ -563,9 +566,9 @@ function orderedComparison(less: boolean, equal: boolean, operator: bstring): bo
   return !equal;
 }
 
-export function each<T>(validator: Validator, field: bstring, values: T[], rule: (validator: Validator, field: bstring, value: T) => Result<void>): Result<void> {
+export function each<T>(validator: Validator | null, field: bstring, values: T[], rule: ElementRule<T> | null): Result<void> {
   validatePath(field)?;
-  if (validator == nil || rule == nil) {
+  if (validator === null || rule === null) {
     return fail(errors.New("array validator and rule must not be nil"));
   }
   const pending = newValidator();

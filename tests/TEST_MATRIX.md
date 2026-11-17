@@ -18,3 +18,8 @@
 | Numbers | inclusive boundaries and fractional values | NaN and both infinities become finite-number issues | non-finite/reversed bounds are configuration errors |
 | State | multiple accumulated issues and clear | existing state survives configuration errors | invalid operations and batches never partially mutate state |
 | Robustness | fixed regression matrices | arbitrary fields, codes, messages, Unicode/invalid UTF-8 strings and rule arguments | five fuzz targets never panic or violate atomicity |
+
+Compiler compatibility is checked with Kinmokusei v0.4.7 and v0.4.12, including
+source checks, generated-Go tests, executable examples and an independent
+short-import consumer. Coverage requires 100% of source-mapped library statements;
+compiler runtime helpers and injected non-null panic paths are excluded.

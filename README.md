@@ -1,10 +1,11 @@
 # km-validate
 
-## Compatibility with Kinmokusei v0.4.7
+## Compiler compatibility
 
-This minor release requires Kinmokusei v0.4.7 or newer. Text parameters,
-results, and collections use `bstring` to preserve the previous byte-oriented
-behavior of Go strings. Scalar verified `string` arguments can still widen to
+Requires Kinmokusei v0.4.7 or newer. CI tests both v0.4.7 and v0.4.12.
+
+Text parameters, results, and collections use `bstring` to preserve the previous
+byte-oriented behavior of Go strings. Scalar verified `string` arguments can still widen to
 `bstring`; collections must be declared as `bstring[]` or copied explicitly.
 Use checked `string(raw)` conversion when your application needs verified UTF-8.
 
@@ -175,8 +176,14 @@ safe or structurally complete. Skip the rule explicitly for optional uploads.
 `lookup` is `() => Result<boolean>`, returning whether a matching row exists.
 Closures can capture any typed value, the request context, database connection,
 tenant scope, and current record ID. Each valid rule calls it exactly once;
-nil callbacks or invalid paths fail before the lookup runs. Backend failures
+missing callbacks (`null` in Kinmokusei, `nil` in Go) or invalid paths fail
+before the lookup runs. Backend failures
 return the original error without adding an input issue.
+
+`Lookup` names the lookup function type and `ElementRule<T>` names the callback
+used by `each<T>`. The nullable lookup, element-rule and validator arguments
+preserve configuration-error reporting under v0.4.12's non-null contracts;
+missing values return an error without adding issues or calling a callback.
 
 For example, capture a parameterized query in a callback:
 
@@ -210,12 +217,16 @@ families in one validation operation.
 ## Development
 
 Run source checks, static analysis, the complete rule/configuration/boundary
-matrix, 100% generated-Go statement coverage, the race detector, seven fuzz
-targets, executable basic/form examples, and an independent short-import consumer:
+matrix, 100% source-mapped library statement coverage, the race detector, seven
+fuzz targets, executable basic/form examples, and an independent short-import consumer:
 
 ```sh
 KEIKA=keika sh scripts/test.sh
 ```
+
+The coverage gate requires every source-mapped library statement to execute.
+Compiler runtime helpers and injected non-null panic paths are excluded; the
+actual generated Go, including those checks, is used by all tests.
 
 Generated Go is test output and is not maintained as source.
 
