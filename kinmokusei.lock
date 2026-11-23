@@ -1,6 +1,6 @@
 {
   "lockVersion": 4,
-  "manifestHash": "sha256:31b730bf598b781802a35618b19b5a5b26f20496288636a9366700fc4085831c",
+  "manifestHash": "sha256:4568b8bc22fa40696d1741766f9399fb63e762f3710504112aede698f475a82f",
   "goVersion": "1.23",
   "target": {
     "goos": "linux",
