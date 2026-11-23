@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1
+
+- Preserve configuration errors for missing lookup callbacks, array rules and
+  validators with explicit nullable types under Kinmokusei v0.4.12.
+- Name callback types `Lookup` and `ElementRule<T>` without changing the Go API.
+- Test the minimum supported v0.4.7 compiler alongside v0.4.12, and enforce full
+  library statement coverage using compiler source maps.
+
 ## 0.2.0
 
 - Add conditional required rules: `requiredIf`, `requiredUnless`,
