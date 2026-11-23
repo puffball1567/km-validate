@@ -46,7 +46,7 @@ follow `[a-z][a-z0-9_]*`.
 ## Installation
 
 ```sh
-keika deps add github.com/puffball1567/km-validate@v0.3.0
+keika deps add github.com/puffball1567/km-validate@v0.3.1
 ```
 
 ```ts

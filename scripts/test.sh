@@ -66,7 +66,7 @@ cp validate.km go.mod kinmokusei.lock kinmokusei.toml LICENSE "$library_dir/"
 "$keika_command" new app --module example.com/km-validate-consumer "$consumer_dir"
 cp tests/external_consumer/main.km "$consumer_dir/main.km"
 cd "$consumer_dir"
-"$keika_command" deps add --offline --replace ../library github.com/puffball1567/km-validate@v0.3.0
+"$keika_command" deps add --offline --replace ../library github.com/puffball1567/km-validate@v0.3.1
 "$keika_command" check
 "$keika_command" build -o "$test_dir/external-consumer-app"
 actual_output=$("$test_dir/external-consumer-app")

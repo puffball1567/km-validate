@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.1
 
 - Preserve configuration errors for missing lookup callbacks, array rules and
   validators with explicit nullable types under Kinmokusei v0.4.12.
